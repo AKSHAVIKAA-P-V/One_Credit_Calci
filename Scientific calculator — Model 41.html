@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scientific calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Space+Mono:wght@400;700&display=swap">
+<style>
+/* ---------- Design tokens: instrument panel ---------- */
+:root{
+  --room:#15181A;
+  --chassis:#2B2F32; --chassis-hi:#34393D; --chassis-lo:#202325;
+  --rivet:#454A4E;
+  --lcd-bg:#0B1912; --lcd-glow:#173322; --lcd-ink:#7FE6A0; --lcd-dim:#3E7A56;
+  --num:#ECE7DC; --num-ink:#20241F;
+  --fn:#4A5257; --fn-ink:#E7ECEC;
+  --mem:#383D40; --mem-ink:#9FB0AE;
+  --op:#C98A2C; --op-ink:#241600;
+  --eq:#DBA53F; --eq-ink:#241600;
+  --clr:#A6473C; --clr-ink:#FFF3EE;
+  --focus:#7FE6A0;
+  --s1:4px; --s2:8px; --s3:12px; --s4:18px;
+  --r-key:9px; --r-panel:26px; --r-lcd:5px;
+  --font-ui:"Space Grotesk",system-ui,sans-serif;
+  --font-lcd:"Space Mono",ui-monospace,Menlo,Consolas,monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+:root[data-theme="dark"]{ --room:#0C0E0F; }
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){ --room:#0C0E0F; } }
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{
+  margin:0;min-height:100vh;display:grid;place-items:center;padding:var(--s4);
+  background:
+    radial-gradient(1200px 700px at 50% -10%, #1E2224 0%, var(--room) 60%);
+  font-family:var(--font-ui);
+}
+
+/* ---------- Chassis ---------- */
+.device{
+  width:min(100%,392px);
+  background:
+    linear-gradient(155deg,var(--chassis-hi),var(--chassis) 40%,var(--chassis-lo));
+  border-radius:var(--r-panel);
+  padding:22px 18px 18px;
+  position:relative;
+  box-shadow:
+    0 30px 60px -25px rgba(0,0,0,.65),
+    inset 0 1px 0 rgba(255,255,255,.06),
+    inset 0 -2px 0 rgba(0,0,0,.4);
+}
+.rivet{position:absolute;width:7px;height:7px;border-radius:50%;background:var(--rivet);
+  box-shadow:inset 0 1px 1px rgba(0,0,0,.6), 0 1px 0 rgba(255,255,255,.08);}
+.rivet.tl{top:12px;left:14px}.rivet.tr{top:12px;right:14px}
+.rivet.bl{bottom:12px;left:14px}.rivet.br{bottom:12px;right:14px}
+
+.brand{display:flex;justify-content:space-between;align-items:baseline;padding:0 2px 10px;
+  font-size:11px;letter-spacing:.14em;color:#8A9092;}
+.brand b{color:#C7CCCC;font-weight:700;letter-spacing:.02em}
+
+/* ---------- LCD ---------- */
+.lcd-frame{background:var(--chassis-lo);border-radius:calc(var(--r-lcd) + 6px);padding:9px;
+  box-shadow:inset 0 2px 6px rgba(0,0,0,.6);}
+.lcd{
+  background:radial-gradient(120% 160% at 100% 0%, var(--lcd-glow), var(--lcd-bg) 65%);
+  color:var(--lcd-ink);border-radius:var(--r-lcd);padding:14px var(--s4);
+  font-family:var(--font-lcd);text-align:right;min-height:118px;
+  display:flex;flex-direction:column;gap:6px;
+  box-shadow:inset 0 0 18px rgba(0,0,0,.5);
+}
+.status{display:flex;justify-content:space-between;align-items:center;font-size:11px;letter-spacing:.08em;color:var(--lcd-dim)}
+.mode{font:700 11px var(--font-lcd);letter-spacing:.08em;color:var(--lcd-ink);background:transparent;
+  border:1px solid var(--lcd-dim);border-radius:3px;padding:3px 8px;cursor:pointer}
+.expr{font-size:14px;color:var(--lcd-dim);white-space:nowrap;overflow-x:auto;min-height:1.4em;scrollbar-width:none}
+.out{font-size:36px;font-weight:700;white-space:nowrap;overflow-x:auto;scrollbar-width:none;margin-top:auto;
+  text-shadow:0 0 10px rgba(127,230,160,.35);}
+.out.preview{opacity:.6;text-shadow:none}.out.error{font-size:19px;text-shadow:none;color:#E68E7C}
+
+/* ---------- Keys ---------- */
+.keys{display:grid;grid-template-columns:repeat(5,1fr);gap:7px;margin-top:16px}
+.key{
+  min-height:50px;border:0;border-radius:var(--r-key);cursor:pointer;padding:0;touch-action:manipulation;
+  font:700 16px var(--font-ui);position:relative;
+  box-shadow:0 3px 0 rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.16);
+}
+.key:active{transform:translateY(2px);box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
+.key:focus-visible,.mode:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+.key.num{background:linear-gradient(160deg,#F5F1E7,var(--num));color:var(--num-ink)}
+.key.fn{background:linear-gradient(160deg,#565E63,var(--fn));color:var(--fn-ink);font-size:13.5px}
+.key.mem{background:linear-gradient(160deg,#42474A,var(--mem));color:var(--mem-ink);min-height:34px;font-size:12px;letter-spacing:.03em}
+.key.op{background:linear-gradient(160deg,#E0A548,var(--op));color:var(--op-ink);font-size:19px}
+.key.eq{background:linear-gradient(160deg,#F0BC5D,var(--eq));color:var(--eq-ink);font-size:21px}
+.key.clr{background:linear-gradient(160deg,#BC584C,var(--clr));color:var(--clr-ink)}
+.key.span2{grid-column:span 2}
+@media (prefers-reduced-motion:no-preference){.key{transition:transform .06s}}
+</style>
+</head>
+<body>
+<main class="device" aria-label="Scientific calculator">
+  <div class="rivet tl"></div><div class="rivet tr"></div><div class="rivet bl"></div><div class="rivet br"></div>
+  <div class="brand"><b>MODEL 41</b><span>SCIENTIFIC</span></div>
+  <div class="lcd-frame">
+    <section class="lcd">
+      <div class="status"><button id="mode" class="mode" type="button"></button><span id="mem"></span></div>
+      <div id="expr" class="expr"></div>
+      <div id="out" class="out" role="status"></div>
+    </section>
+  </div>
+  <div id="keys" class="keys"></div>
+</main>
+
+<script>
+const KEYS=[
+ ['MC','mc','mem','Clear memory'],['MR','mr','mem','Recall memory'],['M+','m+','mem','Add to memory'],['M−','m-','mem','Subtract from memory'],['AC','ac','clr','All clear'],
+ ['sin','sin(','fn'],['cos','cos(','fn'],['tan','tan(','fn'],['log','log(','fn','Log base 10'],['ln','ln(','fn','Natural log'],
+ ['x²','^2','fn','Square'],['√','√(','fn','Square root'],['xʸ','^','fn','Power'],['1/x','inv','fn','Reciprocal'],['n!','!','fn','Factorial'],
+ ['(','(','fn','Open parenthesis'],[')',')','fn','Close parenthesis'],['π','π','fn','Pi'],['e','e','fn',"Euler's number"],['%','%','fn','Percent'],
+ ['7','7','num'],['8','8','num'],['9','9','num'],['⌫','bk','fn','Backspace'],['÷','÷','op','Divide'],
+ ['4','4','num'],['5','5','num'],['6','6','num'],['Ans','Ans','fn','Previous answer'],['×','×','op','Multiply'],
+ ['1','1','num'],['2','2','num'],['3','3','num'],['10ˣ','10^(','fn','Ten to the power'],['−','−','op','Subtract'],
+ ['0','0','num span2'],['.','.','num','Decimal point'],['=','=','eq','Equals'],['+','+','op','Add']
+];
+const S={expr:'',last:'',ans:0,mem:0,hasMem:false,deg:true,done:false,err:null,prev:'0'};
+const $=id=>document.getElementById(id);
+
+/* --- Expression parser (no eval): recursive descent --- */
+function tokenize(s){
+  const t=[];let i=0;
+  while(i<s.length){
+    const c=s[i],r=s.slice(i);let m;
+    if(m=r.match(/^(\d+\.?\d*|\.\d+)/)){t.push({n:parseFloat(m[0])});i+=m[0].length}
+    else if(m=r.match(/^(sin|cos|tan|log|ln)/)){t.push({f:m[0]});i+=m[0].length}
+    else if(r.startsWith('Ans')){t.push({n:S.ans});i+=3}
+    else if(c==='M'){t.push({n:S.mem});i++}
+    else if(c==='π'){t.push({n:Math.PI});i++}
+    else if(c==='e'){t.push({n:Math.E});i++}
+    else if(c==='√'){t.push({f:'sqrt'});i++}
+    else if('+−×÷^!%()'.includes(c)){t.push({o:c});i++}
+    else throw new Error('Unexpected '+c);
+  }
+  return t;
+}
+const snap=x=>Math.abs(x)<1e-15?0:x;
+function fn(f,a){
+  const d=S.deg,r=x=>d?x*Math.PI/180:x;
+  switch(f){
+    case'sin':return snap(Math.sin(r(a)));
+    case'cos':return snap(Math.cos(r(a)));
+    case'tan':if(d?((a-90)%180===0):Math.abs(Math.cos(a))<1e-15)throw new Error('Undefined');return snap(Math.tan(r(a)));
+    case'log':if(a<=0)throw new Error('Invalid input');return Math.log10(a);
+    case'ln':if(a<=0)throw new Error('Invalid input');return Math.log(a);
+    case'sqrt':if(a<0)throw new Error('Invalid input');return Math.sqrt(a);
+  }
+}
+function evaluate(src){
+  const t=tokenize(src);let p=0;
+  const isO=(...c)=>t[p]&&c.includes(t[p].o);
+  const expr=()=>{let v=term();while(isO('+','−')){const o=t[p++].o,r=term();v=o==='+'?v+r:v-r}return v};
+  const term=()=>{let v=unary();for(;;){
+    if(isO('×','÷')){const o=t[p++].o,r=unary();if(o==='÷'&&r===0)throw new Error('Divide by zero');v=o==='×'?v*r:v/r}
+    else if(t[p]&&(t[p].n!==undefined||t[p].f||isO('(')))v*=unary();
+    else return v}};
+  const unary=()=>{if(isO('−')){p++;return -unary()}if(isO('+')){p++;return unary()}return power()};
+  const power=()=>{const b=postfix();if(isO('^')){p++;return Math.pow(b,unary())}return b};
+  const postfix=()=>{let v=primary();
+    while(isO('!','%')){const o=t[p++].o;
+      if(o==='%')v/=100;
+      else{if(v<0||!Number.isInteger(v)||v>170)throw new Error('Invalid input');let f=1;for(let i=2;i<=v;i++)f*=i;v=f}}
+    return v};
+  const primary=()=>{const k=t[p++];
+    if(!k)throw new Error('Incomplete expression');
+    if(k.n!==undefined)return k.n;
+    if(k.o==='('){const v=expr();if(isO(')'))p++;return v}
+    if(k.f){let a;if(isO('(')){p++;a=expr();if(isO(')'))p++}else a=unary();return fn(k.f,a)}
+    throw new Error('Unexpected '+k.o)};
+  const v=expr();
+  if(p<t.length)throw new Error('Unexpected '+(t[p].o||'input'));
+  if(!isFinite(v))throw new Error('Overflow');
+  return v;
+}
+function fmt(n){
+  const s=parseFloat(n.toPrecision(12)),a=Math.abs(s);
+  return(a!==0&&(a>=1e12||a<1e-6))?s.toExponential():String(s);
+}
+
+/* --- Input handling --- */
+const BIN=/[+−×÷^]/;
+function insert(tok){
+  const isPost=tok==='!'||tok==='%'||tok==='^2';
+  const isBin=BIN.test(tok)&&tok.length===1;
+  if(S.done){S.expr=(isBin||isPost)?'Ans':'';S.done=false}
+  if(tok==='.'&&(S.expr.match(/[\d.]*$/)[0]).includes('.'))return;
+  if(!S.expr&&(isPost||(isBin&&tok!=='+'&&tok!=='−')))S.expr='Ans';
+  const last=S.expr.slice(-1);
+  if(isBin&&BIN.test(last)&&!(tok==='−'&&/[×÷^]/.test(last))){S.expr=S.expr.slice(0,-1)+tok;return}
+  S.expr+=tok;
+}
+function currentValue(){
+  if(S.done)return S.ans;
+  if(!S.expr)return null;
+  try{return evaluate(S.expr)}catch(e){S.err=e.message;return null}
+}
+function press(k){
+  S.err=null;
+  if(k==='ac'){S.expr='';S.done=false;S.prev='0'}
+  else if(k==='bk'){
+    if(S.done){S.done=false;S.expr=S.last}
+    S.expr=S.expr.replace(/(sin\(|cos\(|tan\(|log\(|ln\(|Ans|.)$/s,'');
+  }
+  else if(k==='='){
+    if(S.expr&&!S.done){try{S.ans=evaluate(S.expr);S.last=S.expr;S.done=true}catch(e){S.err=e.message}}
+  }
+  else if(k==='mc'){S.mem=0;S.hasMem=false}
+  else if(k==='mr')insert('M');
+  else if(k==='m+'||k==='m-'){const v=currentValue();if(v!==null){S.mem+=k==='m+'?v:-v;S.hasMem=true}}
+  else if(k==='inv'){
+    if(S.done){S.expr='Ans';S.done=false}
+    S.expr=S.expr?'1÷('+S.expr+')':'1÷(';
+  }
+  else insert(k);
+  render();
+}
+function render(){
+  const out=$('out'),ex=$('expr');
+  let txt,cls='out';
+  if(S.err){txt=S.err;cls+=' error'}
+  else if(S.done)txt=fmt(S.ans);
+  else{
+    cls+=' preview';
+    if(!S.expr)S.prev='0';
+    else try{S.prev=fmt(evaluate(S.expr))}catch(e){}
+    txt=S.prev;
+  }
+  ex.textContent=S.done?S.last+' =':S.expr;
+  out.textContent=txt;out.className=cls;
+  out.style.fontSize=txt.length>14?'22px':txt.length>10?'28px':'';
+  if(cls.includes('error'))out.style.fontSize='';
+  $('mem').textContent=S.hasMem?'M':'';
+  const m=$('mode');
+  m.textContent=S.deg?'DEG':'RAD';
+  m.setAttribute('aria-label','Angle unit: '+(S.deg?'degrees':'radians')+'. Activate to switch.');
+  ex.scrollLeft=ex.scrollWidth;
+}
+
+/* --- Build UI --- */
+$('keys').innerHTML=KEYS.map(([l,k,c,a])=>
+  `<button type="button" class="key ${c}" data-k="${k}"${a?` aria-label="${a}"`:''}>${l}</button>`).join('');
+$('keys').addEventListener('click',e=>{const b=e.target.closest('button[data-k]');if(b)press(b.dataset.k)});
+$('mode').addEventListener('click',()=>{S.deg=!S.deg;render()});
+addEventListener('keydown',e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey)return;
+  const k=e.key;let a=null;
+  const map={'+':'+','-':'−','*':'×','/':'÷','^':'^','(':'(',')':')','!':'!','%':'%','Enter':'=','=':'=','Backspace':'bk','Escape':'ac'};
+  if(/^[0-9.]$/.test(k))a=k;
+  else if(map[k])a=map[k];
+  else a=({p:'π',e:'e',s:'sin(',c:'cos(',t:'tan(',l:'log(',n:'ln(',r:'√('})[k.toLowerCase()]||null;
+  if(a){e.preventDefault();press(a)}
+});
+render();
+</script>
+</body>
+</html>
